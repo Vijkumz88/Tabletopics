@@ -1,102 +1,88 @@
-# Impromptuspeechninja - Speech Training Application
+# 🎙️ Impromptuspeechninja - AI Speech Coach
 
-A training application to help improve impromptu speaking skills through practice and AI-powered feedback.
+Impromptuspeechninja is a Next.js web application designed to help you master the art of impromptu speaking. Get instant topics, record your speech, and receive AI-powered feedback to improve your clarity, coherence, and delivery. Powered by OpenAI's Whisper for transcription and GPT-4o for insightful analysis.
 
-## Requirements
+### ✨ Features
 
-### Functional Requirements
+*   **Dynamic Topic Generation**: Select a difficulty (easy, medium, hard) and get a random topic to speak on.
+*   **Integrated Timers**: Separate timers for preparation (10 seconds) and speech (2 minutes) to simulate real-world scenarios.
+*   **In-Browser Audio Recording**: Easily record your speech directly in the application.
+*   **Accurate Speech-to-Text**: Leverages OpenAI Whisper API for fast and precise transcription of your recorded audio.
+*   **Comprehensive AI Feedback**: Utilizes OpenAI GPT-4o to provide structured feedback on various aspects of your speech, including:
+    *   **Structure**: Organization and flow of your ideas.
+    *   **Coherence**: Clarity and logical consistency.
+    *   **Speaking Speed**: Words Per Minute (WPM) analysis.
+    *   **Filler Words**: Identifies and counts filler words (e.g., "um," "like") with examples.
+    *   **Repetition**: Detects and highlights repetitive phrases or ideas.
+    *   **Time Management**: Evaluates how effectively you used the allotted speaking time.
+    *   **Overall Feedback**: A summary of your performance and key areas for improvement.
+*   **View Transcript**: Review the full text of your speech.
+*   **Modern & Responsive UI**: Built with Next.js, Tailwind CSS, and Shadcn UI for a clean and user-friendly experience.
 
-1. **Difficulty Selection**
-   - Provide option to select different difficulty levels (Easy, Medium, Hard)
-   - Default to Easy level
+### 🚀 How to Get Started
 
-2. **Speech Practice Flow**
-   - Provide a topic based on the difficulty selected along with 10-second preparation countdown. Display the topic prominently.
-   - 2-minute speech recording with visual countdown. Topic continues to be displayed.
-   - Visual indicator for recording status (red recording symbol with sound wave)
-   - Visual warning when 30 seconds remain (yellow countdown)
-   - Option to cancel session at any point
+1.  **Clone the GitHub Repository:**
+    ```bash
+    git clone https://github.com/Vijkumz88/Tabletopics.git
+    cd Tabletopics
+    ```
 
-3. **Speech Analysis**
-   - Real-time speech-to-text conversion
-   - LLM-powered feedback on:
-     - Speech structure
-     - Coherence and clarity
-     - Speaking pace (140-150 words per minute target)
-     - Filler word usage
-     - Repetitive sentence detection
-     - Time management
+2.  **Install Dependencies:**
+    This project uses Node.js and npm. Make sure you have them installed.
+    ```bash
+    npm install
+    ```
 
-4. **User Interface**
-   - Responsive design for both desktop and mobile browsers
-   - Simple, intuitive navigation
-   - Visual feedback during recording
-   - Option to copy feedback to clipboard
+3.  **Set Up Environment Variables:**
+    You'll need an OpenAI API key to use the transcription and feedback generation features.
+    *   Sign up for an [OpenAI account](https://platform.openai.com/) and obtain your API key.
+    *   Create a file named `.env.local` in the root of the project.
+    *   Add your API key to this file:
+        ```env
+        OPENAI_API_KEY="your_openai_api_key_here"
+        ```
 
-### Non-Functional Requirements
+4.  **Run the Development Server:**
+    ```bash
+    npm run dev
+    ```
+    Open [http://localhost:3000](http://localhost:3000) in your browser to see the application.
 
-1. **Performance**
-   - Fast speech-to-text processing
-   - Minimal latency for feedback generation
+### 🛠️ How It Works
 
-2. **Usability**
-   - Intuitive interface requiring minimal instruction
-   - Clear visual cues for timing and recording status
+Impromptuspeechninja combines a Next.js frontend with backend API routes to deliver a seamless speech coaching experience:
 
-3. **Compatibility**
-   - Cross-browser support
-   - Responsive design for various screen sizes
+*   **Frontend (Next.js, React, TypeScript, Tailwind CSS, Shadcn UI):**
+    *   **`src/app/practice/page.tsx`**: The main page where users select difficulty, receive a topic, manage preparation and speech timers, and record their audio. It orchestrates the user flow through various stages: preparation, speaking, recording completion, transcription, and feedback generation.
+    *   **`src/lib/context/AppContext.tsx`**: Manages global application state, including the current topic, audio recording data (blob, URL, duration), the transcribed speech text, and the AI-generated feedback.
+    *   **`src/lib/hooks/useAudioRecorder.ts`**: A custom hook encapsulating the browser's `MediaRecorder` API for audio recording functionalities.
+    *   **`src/app/feedback/page.tsx`**: Displays the detailed, structured feedback generated by the AI, along with an option to view the full transcript.
+    *   **`src/app/transcript/page.tsx`**: Shows the complete transcript of the user's speech.
+    *   **UI Components (`src/components/ui/`)**: Reusable UI elements built with Shadcn UI and Tailwind CSS for a consistent look and feel.
 
-## Tech Stack
+*   **Backend (Next.js API Routes):**
+    *   **`src/app/api/transcribe/route.ts`**:
+        *   Receives the recorded audio blob (as `FormData`) from the frontend.
+        *   Calls the OpenAI Whisper API to convert the audio to text.
+        *   Returns the transcription to the frontend.
+    *   **`src/app/api/generate-feedback/route.ts`**:
+        *   Receives the transcript and the speech duration from the frontend.
+        *   Calculates Words Per Minute (WPM).
+        *   Constructs a detailed prompt for the OpenAI GPT-4o model, instructing it to analyze the transcript and provide feedback in a specific JSON structure.
+        *   Calls the OpenAI GPT-4o API with `response_format: { type: "json_object" }` to ensure structured output.
+        *   Parses the AI's response and returns the comprehensive feedback object to the frontend.
 
-### Frontend
-- Framework: Next.js with TypeScript
-- Styling: Tailwind CSS for responsive design
-- UI Components: Shadcn UI for consistent, accessible components
-- State Management: React Context API
+*   **Key Technologies:**
+    *   **Next.js**: Full-stack React framework for server-side rendering and API routes.
+    *   **React**: JavaScript library for building user interfaces.
+    *   **TypeScript**: Superset of JavaScript adding static typing.
+    *   **OpenAI API**:
+        *   **Whisper**: For speech-to-text.
+        *   **GPT-4o**: For natural language understanding and feedback generation.
+    *   **Tailwind CSS**: Utility-first CSS framework for rapid UI development.
+    *   **Shadcn UI**: Re-usable UI components.
+    *   **Zustand / React Context API**: For state management (implicitly, through `AppContext`).
 
-### Backend
-- Runtime: Node.js with Express
-- API: RESTful endpoints for handling speech processing and feedback
+---
 
-### Speech Processing
-- Speech-to-Text: OpenAI Whisper API
-- Feedback Generation: OpenAI GPT-4o
-- OpenAI API key is in the OS itself
-
-### Deployment
-- Local Development: Next.js development server
-- Production: Vercel (frontend) and Railway/Render (backend if needed)
-
-## Implementation Milestones
-
-### Milestone 1: Project Setup and Basic UI
-- Initialize Next.js project with TypeScript
-- Set up Tailwind CSS and Shadcn UI
-- Create responsive layouts for all pages
-- Implement difficulty selection and basic navigation
-
-### Milestone 2: Timer and Recording Functionality
-- Implement 10-second preparation countdown
-- Create 2-minute speech timer with color change at 1:30
-- Develop audio recording functionality
-- Design and implement sound wave visualization
-
-### Milestone 3: Speech-to-Text Integration
-- Integrate speech recognition API
-- Implement real-time transcription
-- Store speech text for analysis
-- Add error handling for speech recognition
-
-### Milestone 4: Feedback Generation
-- Integrate with LLM API (OpenAI)
-- Design prompt engineering for speech analysis
-- Implement feedback generation based on specified metrics
-- Create feedback display page with copy functionality
-
-### Milestone 5: Testing and Refinement
-- Conduct user testing for usability
-- Optimize speech recognition accuracy
-- Refine feedback quality and relevance
-- Fix bugs and performance issues
-- Prepare for deployment 
+This project aims to provide a practical tool for anyone looking to enhance their public speaking and impromptu communication skills.
