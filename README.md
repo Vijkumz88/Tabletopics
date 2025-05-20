@@ -1,6 +1,6 @@
-# 🎙️ Impromptuspeechninja - AI Speech Coach
+# 🎙️ Speech ninja - AI Speech Coach
 
-Impromptuspeechninja is a Next.js web application designed to help you master the art of impromptu speaking. Get instant topics, record your speech, and receive AI-powered feedback to improve your clarity, coherence, and delivery. Powered by OpenAI's Whisper for transcription and GPT-4o for insightful analysis.
+Speech ninja is a Next.js web application designed to help you master the art of impromptu speaking. Get instant topics, record your speech, and receive AI-powered feedback to improve your clarity, coherence, and delivery. Powered by OpenAI's Whisper for transcription and GPT-4o for insightful analysis.
 
 ### ✨ Features
 
