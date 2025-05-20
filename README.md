@@ -1,4 +1,4 @@
-# Impromptuspeechninja - Speech Training Application
+# Speechninja - Speech Training Application
 
 A training application to help improve impromptu speaking skills through practice and AI-powered feedback.
 
