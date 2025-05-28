@@ -15,21 +15,21 @@ export async function POST(request: NextRequest) {
     const { transcript, duration } = body;
     // In src/app/api/generate-feedback/route.ts, within the try block:
     
-    console.log("--- WPM DEBUG START ---");
-    console.log("Received Full Request Body:", JSON.stringify(body)); // Log the whole body
-    console.log("Received Transcript (type):", typeof transcript);
-    console.log("Received Transcript (raw):", transcript); // Log the exact transcript string
+    //console.log("--- WPM DEBUG START ---");
+    //console.log("Received Full Request Body:", JSON.stringify(body)); // Log the whole body
+    //console.log("Received Transcript (type):", typeof transcript);
+    //console.log("Received Transcript (raw):", transcript); // Log the exact transcript string
     // For more detailed inspection of the string:
     // console.log("Received Transcript (char codes):", transcript.split('').map(c => c.charCodeAt(0)).join(', '));
     console.log("Received Duration (seconds):", duration);
 
     // Test the split directly
     const wordsArray = transcript.split(/\s+/);
-    console.log("Words array (after split):", JSON.stringify(wordsArray));
+    //console.log("Words array (after split):", JSON.stringify(wordsArray));
     const filteredWordsArray = wordsArray.filter(Boolean);
-    console.log("Filtered words array (after filter):", JSON.stringify(filteredWordsArray));
+    //console.log("Filtered words array (after filter):", JSON.stringify(filteredWordsArray));
     const wordCount = filteredWordsArray.length; // Define wordCount here from the filtered array
-    console.log("Calculated wordCount (from debug block):", wordCount);
+    //console.log("Calculated wordCount (from debug block):", wordCount);
 
     if (!transcript || typeof transcript !== 'string' || transcript.trim() === '') {
       return NextResponse.json({ error: 'Transcript is required and must be a non-empty string.' }, { status: 400 });
@@ -42,10 +42,10 @@ export async function POST(request: NextRequest) {
     // const wordCount = transcript.split(/\s+/).filter(Boolean).length; // THIS IS THE DUPLICATE - REMOVE/COMMENT OUT
     // console.log("Calculated wordCount:", wordCount); // This log is fine if wordCount is defined above
     const durationInMinutes = duration / 60;
-    console.log("Calculated durationInMinutes:", durationInMinutes);
+    //console.log("Calculated durationInMinutes:", durationInMinutes);
     const calculatedWpm = durationInMinutes > 0 ? Math.round(wordCount / durationInMinutes) : 0;
-    console.log("Calculated WPM (before sending to LLM):", calculatedWpm);
-    console.log("--- WPM DEBUG END ---");
+    //console.log("Calculated WPM (before sending to LLM):", calculatedWpm);
+    //console.log("--- WPM DEBUG END ---");
 
     // Note: The type definition for FeedbackData is provided within the prompt for clarity to the LLM.
     // The import { FeedbackData } from '@/lib/context/AppContext'; is for type safety within this route handler.
@@ -64,10 +64,12 @@ export async function POST(request: NextRequest) {
         structure: {
           score: number; // Score out of 10
           comments: string;
+          examples: string; // Provide examples of how the speaker could have improved their structure
         };
         coherence: {
           score: number; // Score out of 10
           comments: string;
+          examples: string; // Provide examples of how the speaker could have improved their coherence
         };
         speed: {
           wordsPerMinute: number; // This MUST be the calculatedWpm: ${calculatedWpm}
@@ -75,7 +77,7 @@ export async function POST(request: NextRequest) {
         };
         fillerWords: {
           count: number; // Total count of common filler words
-          examples: string[]; // Array of unique filler words found (e.g., ["um", "like"]). Empty array if none.
+          examples: string[]; // Array of unique filler words found (e.g., ["um", "like", "so", "you know"]). Empty array if none.
           comments: string;
         };
         repetition: {
@@ -87,7 +89,7 @@ export async function POST(request: NextRequest) {
           score: number; // Score out of 10, considering the 2-minute target
           comments: string;
         };
-        overallFeedback: string; // A summary of overall performance and key improvement areas.
+        overallFeedback: string; // A summary of overall performance and key improvement areas. Suggest 1-2 actionable steps for the speaker to improve based on the feedbackdata
       };
       \`\`\`
       
