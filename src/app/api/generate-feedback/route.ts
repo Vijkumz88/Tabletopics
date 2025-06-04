@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
     // Note: The type definition for FeedbackData is provided within the prompt for clarity to the LLM.
     // The import { FeedbackData } from '@/lib/context/AppContext'; is for type safety within this route handler.
     const prompt = `
-      You are an expert speech coach. Analyze the following speech transcript and provide detailed feedback.
+      You are an expert speech coach. Analyze the following speech transcript and provide detailed feedback with examples.
       The user was asked to speak on a topic for approximately 2 minutes (120 seconds).
       Transcript: "${transcript}"
       Actual speech duration: ${duration} seconds.
@@ -95,6 +95,9 @@ export async function POST(request: NextRequest) {
       
       Specific Instructions:
       - Provide specific, constructive comments and objective scores where applicable.
+      - Provide examples of how the speaker could have improved their structure and coherence.
+      - In the overall feedback, mention if the speaker used non-english words or phrases. No need to mention if they didn't use any. 
+      - Look out for any abusive or offensive ( racist, sexist etc.) or inappropriate language (e.g. shit, fuck etc.) and highlight it if found in the transcript. 
       - For 'fillerWords': Identify common English filler words like 'um', 'uh', 'ah', 'er', 'like', 'you know', 'so', 'actually', 'basically', 'literally', 'right', 'well'. Provide a total count. 'examples' should be an array of unique filler words found (e.g., ["um", "like"]); if no filler words are found, 'count' must be 0 and 'examples' must be an empty array [].
       - For 'repetition': Identify phrases or core ideas repeated unnecessarily. Provide a count of such instances. 'examples' should be an array of these phrases/ideas (e.g., ["as I said before", "the main point is"]); if no repetitions are found, 'instances' must be 0 and 'examples' must be an empty array [].
       - For 'timeManagement': Evaluate how well the speaker utilized the approximate 2-minute target.
@@ -108,7 +111,7 @@ export async function POST(request: NextRequest) {
       model: "gpt-4o",
       messages: [{ role: "user", content: prompt }],
       response_format: { type: "json_object" },
-      temperature: 0.2, // Lower temperature for more deterministic JSON and factual feedback
+      temperature: 0.7, // Lower temperature for more deterministic JSON and factual feedback
     });
 
     if (!llmResponse.choices || !llmResponse.choices[0] || !llmResponse.choices[0].message.content) {

@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
       model: 'whisper-1',
       response_format: "verbose_json",
       timestamp_granularities: ["segment"],
-      prompt:"Umm, let me think like, hmm...(pause) Okay, here's what I'm, like, thinking. So, you are ah..(pause) a speech coach, ummm, and you are basically helping the user to aaah....(pause) hmm, identify improvement opportunities for their ah... (pause) impromptu speech. ",// Or your preferred Whisper model
+      prompt:"Umm, let me think like, hmm pause Okay, here's what I'm, like, thinking. So, you are errr..pause a speech coach, ummm, and you are basically helping the user to aaah....pause hmm, identify improvement opportunities for their ah... pause impromptu speech. ",// Or your preferred Whisper model
       // language: 'en', // Optional: specify language
       // response_format: 'json', // Default is json
     });

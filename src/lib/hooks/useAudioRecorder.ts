@@ -41,7 +41,17 @@ export const useAudioRecorder = () => {
   // Request microphone permissions
   const requestPermission = useCallback(async () => {
     console.log("useAudioRecorder: requestPermission called");
-    
+
+    if (typeof navigator === 'undefined' || !navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== 'function') {
+      console.error('useAudioRecorder: navigator.mediaDevices.getUserMedia is not available.');
+      setState(prev => ({
+        ...prev,
+        permissionStatus: 'unsupported',
+        error: 'Audio recording is not supported by your browser or the page is not loaded securely (HTTPS). Please ensure you are using HTTPS.'
+      }));
+      return false;
+    }
+
     // Close any existing audio context to prevent duplicates
     if (audioContextRef.current) {
       console.log("useAudioRecorder: Closing existing audio context");
