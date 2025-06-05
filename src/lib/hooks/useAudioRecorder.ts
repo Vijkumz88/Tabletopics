@@ -96,11 +96,12 @@ export const useAudioRecorder = () => {
     }
   }, []);
 
+  // src/lib/hooks/useAudioRecorder.ts
+
   // Start recording
   const startRecording = useCallback(async () => {
     console.log("useAudioRecorder: startRecording called. Current state:", state.isRecording, state.permissionStatus);
     
-    // Fix the logic error - only return if already recording
     if (state.isRecording) {
       console.log("useAudioRecorder: Already recording, returning.");
       return;
@@ -114,8 +115,28 @@ export const useAudioRecorder = () => {
     
     try {
       audioChunksRef.current = [];
+
+      // --- Start of new logic ---
+      // Determine a supported MIME type
+      const MimeTypes = [
+        'audio/webm;codecs=opus', // Preferred for quality and compatibility
+        'audio/webm',
+        'audio/ogg',
+        'audio/mp4', // Good fallback for Safari
+        'audio/m4a'  // Another potential for Apple devices
+      ];
       
-      const mediaRecorder = new MediaRecorder(streamRef.current);
+      const supportedMimeType = MimeTypes.find(type => MediaRecorder.isTypeSupported(type)) || '';
+      if (!supportedMimeType) {
+        console.error('No supported MIME type found for MediaRecorder');
+        setState(prev => ({ ...prev, error: 'Your browser does not support any of the required audio formats.' }));
+        return;
+      }
+      console.log("useAudioRecorder: Using MIME type:", supportedMimeType);
+      // --- End of new logic ---
+      
+      // Use the determined MIME type when creating the MediaRecorder
+      const mediaRecorder = new MediaRecorder(streamRef.current, { mimeType: supportedMimeType });
       console.log("useAudioRecorder: MediaRecorder created");
       
       mediaRecorder.ondataavailable = (e) => {
@@ -126,10 +147,10 @@ export const useAudioRecorder = () => {
       
       mediaRecorder.onstop = () => {
         console.log("useAudioRecorder: MediaRecorder stopped");
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        // Use the same MIME type to create the blob
+        const audioBlob = new Blob(audioChunksRef.current, { type: supportedMimeType });
         const audioUrl = URL.createObjectURL(audioBlob);
         
-        // Update the ref first to prevent race conditions
         isRecordingRef.current = false;
         
         setState(prev => ({
@@ -144,7 +165,6 @@ export const useAudioRecorder = () => {
       mediaRecorder.start();
       console.log("useAudioRecorder: MediaRecorder started");
       
-      // Start timer
       if (timerRef.current) {
         clearInterval(timerRef.current);
       }
@@ -153,7 +173,6 @@ export const useAudioRecorder = () => {
         setState(prev => ({ ...prev, recordingTime: prev.recordingTime + 1 }));
       }, 1000);
       
-      // Update the ref first to prevent race conditions
       isRecordingRef.current = true;
       
       setState(prev => ({ ...prev, isRecording: true, mediaRecorder }));
