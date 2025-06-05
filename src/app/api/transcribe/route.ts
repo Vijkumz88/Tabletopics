@@ -22,12 +22,18 @@ export async function POST(request: NextRequest) {
     }
 
     // Ensure the file is of a supported type (optional, but good practice)
+      
+    
     // Whisper supports: mp3, mp4, mpeg, mpga, m4a, wav, webm
     const supportedTypes = ['audio/mpeg', 'audio/mp4', 'audio/wav', 'audio/webm', 'audio/mp3', 'audio/m4a'];
-    if (!supportedTypes.includes(audioFile.type)) {
+    // --- Start of change ---
+    const isSupported = supportedTypes.some(type => audioFile.type.startsWith(type));
+    if (!isSupported) {
+    // --- End of change ---
       return NextResponse.json(
         { error: `Unsupported audio type: ${audioFile.type}. Supported types are: ${supportedTypes.join(', ')}` },
         { status: 400 }
+
       );
     }
     

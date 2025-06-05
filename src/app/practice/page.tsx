@@ -104,9 +104,13 @@ function PracticePageContent() {
       const transcribeAndFeedbackAudio = async () => {
         let currentTranscript = '';
         try {
+          console.log("Starting transcription process...");
           const formData = new FormData();
-          formData.append('audio', audioBlob, `recording.${audioBlob.type.split('/')[1] || 'webm'}`);
-
+          // --- Start of change ---
+          const fileExtension = (audioBlob.type.split('/')[1] || 'webm').split(';')[0];
+          formData.append('audio', audioBlob, `recording.${fileExtension}`);
+          // --- End of change ---
+          
           const transcribeResponse = await fetch('/api/transcribe', {
             method: 'POST',
             body: formData,
