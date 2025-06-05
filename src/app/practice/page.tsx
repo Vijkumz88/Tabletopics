@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react'; // Added Suspense
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAudioRecorder } from '@/lib/hooks/useAudioRecorder';
@@ -10,7 +10,8 @@ import AudioVisualizer from '@/components/ui/AudioVisualizer';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import { allTopics, shuffleArray } from '@/lib/topics';
 
-export default function PracticePage() {
+// Renamed original component
+function PracticePageContent() {
   const searchParams = useSearchParams();
   const difficulty = searchParams.get('difficulty') || 'easy';
   const router = useRouter();
@@ -19,10 +20,9 @@ export default function PracticePage() {
   const [stage, setStage] = useState<'prep' | 'speaking' | 'completed' | 'transcribing' | 'generatingFeedback'>('prep');
   const [localTopic, setLocalTopic] = useState<string>('');
   const [countdown, setCountdown] = useState<number>(10);
-  const [speakingTime, setSpeakingTime] = useState<number>(120);
+  const [speakingTime, setSpeakingTime] = useState<number>(120); // Default 2 minutes
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   
-  // Audio recording
   const {
     isRecording,
     startRecording,
@@ -30,96 +30,80 @@ export default function PracticePage() {
     getAudioData,
     audioBlob,
     audioUrl,
-    //next 2 added from
     permissionStatus,
-    error,
+    error: audioError, // Renamed to avoid conflict with other errors if any
     requestPermission,
     cleanup
   } = useAudioRecorder();
   
-  // Animation frame for visualization
   const animationFrameRef = useRef<number | null>(null);
   const [audioVisualizerData, setAudioVisualizerData] = useState<Uint8Array>(new Uint8Array(0));
-  
+
   // Initialize topic
   useEffect(() => {
     const difficultyKey = difficulty as keyof typeof allTopics;
     const availableTopics = allTopics[difficultyKey] || allTopics.easy;
-    const shuffledTopics = shuffleArray([...availableTopics]);
+    const shuffledTopics = shuffleArray([...availableTopics]); // Shuffle a copy
     const newTopic = shuffledTopics.length > 0 ? shuffledTopics[0] : "No topics available for this difficulty.";
 
     setLocalTopic(newTopic);
     setTopic(newTopic);
     
-    // Request microphone permission early
     requestPermission();
   }, [difficulty, setTopic, requestPermission]);
   
   // Preparation countdown
   useEffect(() => {
     if (stage !== 'prep' || countdown <= 0) return;
-    //from gemini
-    console.log("Prep countdown running:", countdown);
     const timer = setInterval(() => {
       setCountdown((prev) => {
         if (prev <= 1) {
           clearInterval(timer);
           setStage('speaking');
-          // Start recording when speaking stage begins
-          //
-          console.log("Attempting to start recording from prep countdown...");
           startRecording();
           return 0;
         }
         return prev - 1;
       });
     }, 1000);
-    
     return () => clearInterval(timer);
   }, [stage, countdown, startRecording]);
   
   // Speaking countdown
   useEffect(() => {
-     // Add this console log from
-     console.log("Visualization Effect: stage =", stage, "isRecording =", isRecording);
     if (stage !== 'speaking' || speakingTime <= 0) return;
-    
     const timer = setInterval(() => {
       setSpeakingTime((prev) => {
         if (prev <= 1) {
           clearInterval(timer);
           setStage('completed');
-          // Stop recording when time is up
           stopRecording();
           return 0;
         }
         return prev - 1;
       });
     }, 1000);
-    
     return () => clearInterval(timer);
   }, [stage, speakingTime, stopRecording]);
   
-  // Update audio data in context when recording is completed
+  // Update audio data in context
   useEffect(() => {
     if (stage === 'completed' && audioBlob && audioUrl) {
       setAudioData({
         blob: audioBlob,
         url: audioUrl,
-        duration: 120 - speakingTime,
+        duration: 120 - speakingTime, // Assuming speakingTime was for 120 seconds max
       });
-      // Transition to transcribing stage once audio data is set
       setStage('transcribing'); 
     }
   }, [stage, audioBlob, audioUrl, speakingTime, setAudioData]);
   
-  // New useEffect for transcription
+  // Transcription and Feedback
   useEffect(() => {
     if (stage === 'transcribing' && audioBlob) {
       const transcribeAndFeedbackAudio = async () => {
         let currentTranscript = '';
         try {
-          console.log("Starting transcription process...");
           const formData = new FormData();
           formData.append('audio', audioBlob, `recording.${audioBlob.type.split('/')[1] || 'webm'}`);
 
@@ -132,33 +116,24 @@ export default function PracticePage() {
             const errorData = await transcribeResponse.json();
             throw new Error(errorData.error || `Transcription HTTP error! status: ${transcribeResponse.status}`);
           }
-
           const transcribeData = await transcribeResponse.json();
           if (transcribeData.transcript) {
             setSpeechText(transcribeData.transcript);
-            currentTranscript = transcribeData.transcript; // Store for feedback call
-            console.log("Transcription successful:", currentTranscript);
+            currentTranscript = transcribeData.transcript;
           } else {
-            console.error("Transcription successful, but no transcript in response:", transcribeData);
             setSpeechText('');
             throw new Error("Transcription succeeded but returned no text.");
           }
 
-          // Transition to feedback generation stage
           setStage('generatingFeedback');
-          console.log("Starting feedback generation process...");
-
-          if (!currentTranscript || audioData.duration === undefined || audioData.duration <= 0) {
-            console.error("Cannot generate feedback: Missing transcript or valid audio duration.", { currentTranscript, duration: audioData.duration });
-            setFeedback(null); // Clear any previous feedback
+          if (!currentTranscript || (audioData.duration !== undefined && audioData.duration <= 0)) {
+             setFeedback(null);
             throw new Error("Missing transcript or valid audio duration for feedback generation.");
           }
 
           const feedbackResponse = await fetch('/api/generate-feedback', {
             method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ transcript: currentTranscript, duration: audioData.duration }),
           });
 
@@ -166,109 +141,74 @@ export default function PracticePage() {
             const errorData = await feedbackResponse.json();
             throw new Error(errorData.error || `Feedback API HTTP error! status: ${feedbackResponse.status}`);
           }
-
           const feedbackData = await feedbackResponse.json();
           setFeedback(feedbackData);
-          console.log("Feedback generation successful:", feedbackData);
 
         } catch (processError: any) {
           console.error("Error during transcription or feedback generation:", processError.message);
-          setSpeechText(currentTranscript || ''); // Ensure transcript is set even if feedback fails
-          setFeedback(null); // Clear feedback on error
-          // Optionally, set an error message in context/state to display on feedback page
+          setSpeechText(currentTranscript || '');
+          setFeedback(null);
         } finally {
-          console.log("Navigating to feedback page after all processing attempts...");
           router.push('/feedback');
         }
       };
-
       transcribeAndFeedbackAudio();
     }
   }, [stage, audioBlob, setSpeechText, router, setFeedback, audioData.duration]);
   
-  // Audio visualization animation loop
+  // Audio visualization
   useEffect(() => {
     if (stage !== 'speaking' || !isRecording) {
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
-        animationFrameRef.current = null;
-      }
+      if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
+      animationFrameRef.current = null;
       return;
     }
-    
     const updateVisualization = () => {
-      const audioData = getAudioData();
-      setAudioVisualizerData(audioData);
+      setAudioVisualizerData(getAudioData());
       animationFrameRef.current = requestAnimationFrame(updateVisualization);
     };
-    
     animationFrameRef.current = requestAnimationFrame(updateVisualization);
-    
     return () => {
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
-        animationFrameRef.current = null;
-      }
+      if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
     };
   }, [stage, isRecording, getAudioData]);
-  
-  // Clean up resources when component unmounts
-  useEffect(() => {
-    return () => {
-      cleanup();
-    };
-  }, [cleanup]);
-  
+
+  // Cleanup
+  useEffect(() => () => cleanup(), [cleanup]);
+
   const formatTime = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
-  
+
   const handleCancelClick = () => {
     if (stage === 'speaking') {
-      // Show confirmation dialog if recording is in progress
       setShowConfirmDialog(true);
     } else {
-      // Just go back to home if not recording
       router.push('/');
     }
   };
-  
+
   const handleConfirmCancel = () => {
-    if (isRecording) {
-      stopRecording();
-    }
+    if (isRecording) stopRecording();
     setShowConfirmDialog(false);
     router.push('/');
   };
-  
-  const handleCancelDialog = () => {
-    setShowConfirmDialog(false);
-  };
+
+  const handleCancelDialog = () => setShowConfirmDialog(false);
 
   const handleEndSpeechEarly = () => {
-    console.log("handleEndSpeechEarly called. Current speakingTime:", speakingTime);
-    if (isRecording) {
-      stopRecording(); // This will trigger the onstop event for MediaRecorder
-    }
-    // Important: We need to ensure the speaking timer is also stopped here
-    // to prevent it from continuing to count down and potentially calling stopRecording() again
-    // or interfering with stage transitions.
-    // The main speaking countdown useEffect already clears its interval when stage changes from 'speaking',
-    // so explicitly clearing here might be redundant if setStage happens fast enough,
-    // but it's safer to be explicit if there's any doubt.
-    // For now, we rely on the existing useEffect cleanup for the speaking timer.
-
-    setStage('completed'); // This will trigger the useEffect for audio data processing and feedback generation
+    if (isRecording) stopRecording();
+    setStage('completed');
   };
-  
-  // Calculate progress percentages for circular progress
+
   const prepProgress = ((10 - countdown) / 10) * 100;
   const speakingProgress = ((120 - speakingTime) / 120) * 100;
-  
+
+  // JSX for PracticePageContent
   return (
-    <div className="container flex flex-col items-center justify-center min-h-screen py-12 px-4">
+    <div className="container mx-auto flex flex-col items-center justify-center min-h-screen py-12 px-4">
       {stage === 'prep' && (
         <>
           <h1 className="text-3xl font-bold mb-8 text-center">Prepare Your Speech</h1>
@@ -278,8 +218,8 @@ export default function PracticePage() {
               <CircularProgress 
                 progress={prepProgress} 
                 size={120} 
-                text={countdown} 
-                progressColor="#3b82f6"
+                text={String(countdown)}
+                progressColor="hsl(var(--primary))"
                 className="mb-4"
               />
               <p className="text-xl">
@@ -308,39 +248,40 @@ export default function PracticePage() {
                 progress={speakingProgress} 
                 size={120} 
                 text={formatTime(speakingTime)}
-                progressColor={speakingTime <= 30 ? "#eab308" : "#3b82f6"} 
+                progressColor={speakingTime <= 30 ? "hsl(var(--warning))" : "hsl(var(--primary))"}
                 className={`mb-4 ${speakingTime <= 30 ? "animate-pulse" : ""}`}
               />
             </div>
             <div className="flex justify-center items-center mb-8">
               <div className="w-6 h-6 rounded-full bg-red-500 animate-pulse mr-2"></div>
-              <div className="h-16 w-full max-w-md bg-gray-100 rounded-lg overflow-hidden p-2">
+              <div className="h-16 w-full max-w-md bg-muted rounded-lg overflow-hidden p-2">
                 <AudioVisualizer 
                   audioData={audioVisualizerData}
-                  width={400}
-                  height={50}
-                  barWidth={4}
-                  barGap={2}
-                  barColor="#ef4444"
-                  className="w-full"
+                  barColor="hsl(var(--primary))"
+                  className="w-full h-full"
                 />
               </div>
             </div>
-            {error && (
-              <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-                <p>{error}</p>
+            {audioError && (
+              <div className="bg-destructive/10 border border-destructive text-destructive px-4 py-3 rounded mb-4">
+                <p>{audioError}</p>
                 <p className="text-sm">Please ensure your microphone is connected and permissions are granted.</p>
               </div>
             )}
-            {permissionStatus === 'denied' && (
-              <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded mb-4">
+            {permissionStatus === 'denied' && !audioError && (
+              <div className="bg-warning/10 border border-warning text-warning-foreground px-4 py-3 rounded mb-4">
                 <p>Microphone access is required. Please grant permission to continue.</p>
+              </div>
+            )}
+             {permissionStatus === 'unsupported' && !audioError && (
+              <div className="bg-destructive/10 border border-destructive text-destructive px-4 py-3 rounded mb-4">
+                <p>Audio recording is not supported by your browser or the page is not loaded securely (HTTPS). Please ensure you are using HTTPS.</p>
               </div>
             )}
             <div className="flex justify-center space-x-4">
               <button 
                 onClick={handleEndSpeechEarly}
-                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                className="px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors"
               >
                 End Speech
               </button>
@@ -355,30 +296,20 @@ export default function PracticePage() {
         </>
       )}
       
-      {stage === 'completed' && ( // Show this briefly before transcribing starts
+      {(stage === 'completed' || stage === 'transcribing' || stage === 'generatingFeedback') && (
         <div className="bg-card p-8 rounded-lg shadow-lg max-w-2xl w-full text-center">
-          <h1 className="text-3xl font-bold mb-4">Speech Completed!</h1>
-          <p className="text-xl mb-8">Processing your audio...</p>
-          {/* You can add a spinner here if desired */}
-        </div>
-      )}
-
-      {stage === 'transcribing' && (
-        <div className="bg-card p-8 rounded-lg shadow-lg max-w-2xl w-full text-center">
-          <h1 className="text-3xl font-bold mb-4">Processing Your Speech</h1>
-          <p className="text-xl mb-8">Transcribing your audio, please wait...</p>
+          <h1 className="text-3xl font-bold mb-4">
+            {stage === 'completed' && "Speech Completed!"}
+            {stage === 'transcribing' && "Processing Your Speech"}
+            {stage === 'generatingFeedback' && "Analyzing Your Speech"}
+          </h1>
+          <p className="text-xl mb-8">
+            {stage === 'completed' && "Processing your audio..."}
+            {stage === 'transcribing' && "Transcribing your audio, please wait..."}
+            {stage === 'generatingFeedback' && "Generating your personalized feedback, please wait..."}
+          </p>
           <div className="flex justify-center items-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
-          </div>
-        </div>
-      )}
-
-      {stage === 'generatingFeedback' && (
-        <div className="bg-card p-8 rounded-lg shadow-lg max-w-2xl w-full text-center">
-          <h1 className="text-3xl font-bold mb-4">Analyzing Your Speech</h1>
-          <p className="text-xl mb-8">Generating your personalized feedback, please wait...</p>
-          <div className="flex justify-center items-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-500"></div>
+            <div className={`animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 ${stage === 'generatingFeedback' ? 'border-green-500' : 'border-primary'}`}></div>
           </div>
         </div>
       )}
@@ -394,4 +325,13 @@ export default function PracticePage() {
       />
     </div>
   );
-} 
+}
+
+// New default export for the page
+export default function PracticePageWrapper() {
+  return (
+    <Suspense fallback={<div className="flex justify-center items-center min-h-screen">Loading practice session...</div>}>
+      <PracticePageContent />
+    </Suspense>
+  );
+}
