@@ -12,6 +12,11 @@ export async function POST(request: NextRequest) {
     const formData = await request.formData();
     const audioFile = formData.get('audio') as File | null;
 
+    // --- ADD THIS LOG ---
+    if (audioFile) {
+      console.log(`[DIAGNOSTIC] Received audio file on server. Name: ${audioFile.name}, Size: ${audioFile.size}, Type: ${audioFile.type}`);
+    }
+    // --- END OF LOG ---
     if (!audioFile) {
       return NextResponse.json({ error: 'No audio file provided.' }, { status: 400 });
     }

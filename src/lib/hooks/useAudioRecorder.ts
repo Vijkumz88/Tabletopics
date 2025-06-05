@@ -149,6 +149,9 @@ export const useAudioRecorder = () => {
         console.log("useAudioRecorder: MediaRecorder stopped");
         // Use the same MIME type to create the blob
         const audioBlob = new Blob(audioChunksRef.current, { type: supportedMimeType });
+        // --- ADD THIS LOG ---
+        console.log(`[DIAGNOSTIC] Created audio blob. Size: ${audioBlob.size}, Type: ${audioBlob.type}`);
+        // --- END OF LOG ---
         const audioUrl = URL.createObjectURL(audioBlob);
         
         isRecordingRef.current = false;
