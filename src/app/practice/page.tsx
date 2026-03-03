@@ -9,6 +9,7 @@ import CircularProgress from '@/components/ui/CircularProgress';
 import AudioVisualizer from '@/components/ui/AudioVisualizer';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import { allTopics, shuffleArray } from '@/lib/topics';
+import { getSeenTopics, markTopicAsSeen, clearSeenTopics } from '@/lib/topicHistory';
 
 // Renamed original component
 function PracticePageContent() {
@@ -39,16 +40,27 @@ function PracticePageContent() {
   const animationFrameRef = useRef<number | null>(null);
   const [audioVisualizerData, setAudioVisualizerData] = useState<Uint8Array>(new Uint8Array(0));
 
-  // Initialize topic
+  // Initialize topic — filters out already-seen topics using localStorage
   useEffect(() => {
     const difficultyKey = difficulty as keyof typeof allTopics;
-    const availableTopics = allTopics[difficultyKey] || allTopics.easy;
-    const shuffledTopics = shuffleArray([...availableTopics]); // Shuffle a copy
-    const newTopic = shuffledTopics.length > 0 ? shuffledTopics[0] : "No topics available for this difficulty.";
+    const allForDifficulty = allTopics[difficultyKey] || allTopics.easy;
 
+    let seen = getSeenTopics(difficultyKey);
+    let available = allForDifficulty.filter(t => !seen.includes(t));
+
+    // Auto-reset when all topics for this difficulty have been seen
+    if (available.length === 0) {
+      clearSeenTopics(difficultyKey);
+      available = [...allForDifficulty];
+    }
+
+    const shuffled = shuffleArray([...available]);
+    const newTopic = shuffled[0];
+
+    markTopicAsSeen(difficultyKey, newTopic);
     setLocalTopic(newTopic);
     setTopic(newTopic);
-    
+
     requestPermission();
   }, [difficulty, setTopic, requestPermission]);
   
